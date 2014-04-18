@@ -44,13 +44,11 @@ public class Parser {
 			
 			int ptr = 0;
 			for (String word : wordFreqList) {
-				mail.setWordFrequency(word, Float.valueOf(src[ptr]));
-				ptr++;
+				mail.setWordFrequency(word, Float.valueOf(src[ptr++]));
 			}
 
 			for (String character : charFreqList) {
-				mail.setCharFrequency(character.charAt(0), Float.valueOf(src[ptr]));
-				ptr++;
+				mail.setCharFrequency(character.charAt(0), Float.valueOf(src[ptr++]));
 			}
 
 			mail.setAvgUninterruptedCapitals(Float.valueOf(src[ptr++]));
