@@ -46,10 +46,16 @@ public class Email {
 	 * i.e. unsolicited commercial e-mail. 
 	 */
 	private Boolean spam;
+	
+	/**
+	 * Position in dataset (keeping just for future reference if needed)
+	 */
+	private Integer position;
 
-	public Email() {
+	public Email(Integer position) {
 		wordFreqMap = new LinkedHashMap<String, Float>();
 		charFreqMap = new LinkedHashMap<String, Float>();
+		this.position = position;
 	}
 
 	public void setWordFrequency(String word, Float frequency) {
@@ -93,9 +99,13 @@ public class Email {
 		this.spam = spam;
 	}
 	
+	public Integer getPosition() {
+		return position;
+	}
+	
 	@Override
 	public String toString() {
-		return wordFreqMap.toString() + "\n" + charFreqMap.toString() + ", "
+		return getPosition() + ": " + wordFreqMap.toString() + "\n" + charFreqMap.toString() + ", "
 				+ avgUninterruptedCapitals + ", "
 				+ longestUninterruptedCapitalsLength + ", " + numberOfCapitals
 				+ " --> " + spam + "\n";

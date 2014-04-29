@@ -40,7 +40,7 @@ public class Parser {
 		ArrayList<Email> mails = new ArrayList<Email>();
 		for (int i = 0; i < data.size(); i++) {
 			String[] src = data.get(i).split(",");
-			Email mail = new Email();
+			Email mail = new Email(i);
 			
 			int ptr = 0;
 			for (String word : wordFreqList) {
