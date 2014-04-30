@@ -5,6 +5,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import br.ufrj.ad.spamclassifier.model.Email;
@@ -15,6 +16,9 @@ public class Parser {
 	private static final String PATH_SPAMBASE_DATA = "database/spambase.data";
 	private static final String WORD_FREQ_KEY = "word_freq_";
 	private static final String CHAR_FREQ_KEY = "char_freq_";
+	
+	private static Collection<String> mWords;
+	private static Collection<String> mChars;
 
 	public static ArrayList<Email> parseDatabase() throws IOException {
 		List<String> names = Files.readAllLines(
@@ -22,18 +26,18 @@ public class Parser {
 		List<String> data = Files.readAllLines(
 				Paths.get(PATH_SPAMBASE_DATA), Charset.defaultCharset());
 		
-		List<String> wordFreqList = new ArrayList<String>();
-		List<String> charFreqList = new ArrayList<String>();
+		mWords = new ArrayList<String>();
+		mChars = new ArrayList<String>();
 
 		for (String line : names) {
 			if (line.startsWith(WORD_FREQ_KEY)) {
 				line = line.substring(0, line.indexOf(':'));
 				line = line.replace(WORD_FREQ_KEY, "");
-				wordFreqList.add(line);
+				mWords.add(line);
 			} else if (line.startsWith(CHAR_FREQ_KEY)) {
 				line = line.substring(0, line.indexOf(':'));
 				line = line.replace(CHAR_FREQ_KEY, "");
-				charFreqList.add(line);
+				mChars.add(line);
 			}
 		}
 
@@ -43,11 +47,11 @@ public class Parser {
 			Email mail = new Email(i);
 			
 			int ptr = 0;
-			for (String word : wordFreqList) {
+			for (String word : mWords) {
 				mail.setWordFrequency(word, Float.valueOf(src[ptr++]));
 			}
 
-			for (String character : charFreqList) {
+			for (String character : mChars) {
 				mail.setCharFrequency(character.charAt(0), Float.valueOf(src[ptr++]));
 			}
 
@@ -60,5 +64,18 @@ public class Parser {
 		
 		return mails;
 	}
-
+	
+	public static Collection<String> getWords() {
+		if (mWords == null) {
+			throw new RuntimeException("You need to call Parser.parseDatabase() first!");
+		}
+		return mWords;
+	}
+	
+	public static Collection<String> getChars() {
+		if (mChars == null) {
+			throw new RuntimeException("You need to call Parser.parseDatabase() first!");
+		}
+		return mChars;
+	}
 }

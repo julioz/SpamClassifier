@@ -12,103 +12,111 @@ public class Email {
 	 * string of alphanumeric characters bounded by non-alphanumeric
 	 * characters or end-of-string.
 	 */
-	private LinkedHashMap<String, Float> wordFreqMap;
+	private LinkedHashMap<String, Float> mWordFreqMap;
 	
 	/**
 	 * 6 continuous real [0,100] attributes of type char_freq_CHAR
 	 * percentage of characters in the e-mail that match CHAR,
 	 * i.e. 100 * (number of CHAR occurences) / total characters in e-mail
 	 */
-	private LinkedHashMap<String, Float> charFreqMap;
+	private LinkedHashMap<String, Float> mCharFreqMap;
 	
 	/**
 	 * 1 continuous real [1,...] attribute of type capital_run_length_average 
 	 * = average length of uninterrupted sequences of capital letters 
 	 */
-	private Float avgUninterruptedCapitals;
+	private Float mAverageUninterruptedCapitals;
 	
 	/**
 	 * 1 continuous integer [1,...] attribute of type capital_run_length_longest 
 	 * = length of longest uninterrupted sequence of capital letters 
 	 */
-	private Integer longestUninterruptedCapitalsLength;
+	private Integer mLongestUninterruptedCapitalsLength;
 	
 	/**
 	 * 1 continuous integer [1,...] attribute of type capital_run_length_total 
 	 * = sum of length of uninterrupted sequences of capital letters 
 	 * = total number of capital letters in the e-mail
 	 */
-	private Integer numberOfCapitals;
+	private Integer mNumberOfCapitals;
 	
 	/**
 	 * 1 nominal {0,1} class attribute of type spam 
 	 * = denotes whether the e-mail was considered spam (1) or not (0),
 	 * i.e. unsolicited commercial e-mail. 
 	 */
-	private Boolean spam;
+	private Boolean mSpam;
 	
 	/**
 	 * Position in dataset (keeping just for future reference if needed)
 	 */
-	private Integer position;
+	private Integer mPosition;
 
 	public Email(Integer position) {
-		wordFreqMap = new LinkedHashMap<String, Float>();
-		charFreqMap = new LinkedHashMap<String, Float>();
-		this.position = position;
+		this.mWordFreqMap = new LinkedHashMap<String, Float>();
+		this.mCharFreqMap = new LinkedHashMap<String, Float>();
+		this.mPosition = position;
 	}
-
+	
 	public void setWordFrequency(String word, Float frequency) {
-		wordFreqMap.put(word, frequency);
+		mWordFreqMap.put(word, frequency);
+	}
+	
+	public Float getWordFrequency(String word) {
+		return mWordFreqMap.get(word);
 	}
 
 	public void setCharFrequency(char character, Float frequency) {
-		charFreqMap.put(String.valueOf(character), frequency);
+		mCharFreqMap.put(String.valueOf(character), frequency);
+	}
+	
+	public Float getCharFrequency(char character) {
+		return mCharFreqMap.get(String.valueOf(character));
 	}
 
 	public Float getAvgUninterruptedCapitals() {
-		return avgUninterruptedCapitals;
+		return mAverageUninterruptedCapitals;
 	}
 
 	public void setAvgUninterruptedCapitals(Float avgUninterruptedCapitals) {
-		this.avgUninterruptedCapitals = avgUninterruptedCapitals;
+		this.mAverageUninterruptedCapitals = avgUninterruptedCapitals;
 	}
 
 	public Integer getLongestUninterruptedCapitalsLength() {
-		return longestUninterruptedCapitalsLength;
+		return mLongestUninterruptedCapitalsLength;
 	}
 
 	public void setLongestUninterruptedCapitalsLength(
 			Integer longestUninterruptedCapitalsLength) {
-		this.longestUninterruptedCapitalsLength = longestUninterruptedCapitalsLength;
+		this.mLongestUninterruptedCapitalsLength = longestUninterruptedCapitalsLength;
 	}
 
 	public Integer getNumberOfCapitals() {
-		return numberOfCapitals;
+		return mNumberOfCapitals;
 	}
 
 	public void setNumberOfCapitals(Integer numberOfCapitals) {
-		this.numberOfCapitals = numberOfCapitals;
+		this.mNumberOfCapitals = numberOfCapitals;
 	}
 
 	public boolean isSpam() {
-		return spam;
+		return mSpam;
 	}
 
 	public void setSpam(Boolean spam) {
-		this.spam = spam;
+		this.mSpam = spam;
 	}
 	
 	public Integer getPosition() {
-		return position;
+		return mPosition;
 	}
 	
 	@Override
 	public String toString() {
-		return getPosition() + ": " + wordFreqMap.toString() + "\n" + charFreqMap.toString() + ", "
-				+ avgUninterruptedCapitals + ", "
-				+ longestUninterruptedCapitalsLength + ", " + numberOfCapitals
-				+ " --> " + spam + "\n";
+		return getPosition() + ": " + mWordFreqMap.toString() + "\n" + mCharFreqMap.toString() + ", "
+				+ mAverageUninterruptedCapitals + ", "
+				+ mLongestUninterruptedCapitalsLength + ", " + mNumberOfCapitals
+				+ " --> " + mSpam + "\n";
 	}
 
 }
