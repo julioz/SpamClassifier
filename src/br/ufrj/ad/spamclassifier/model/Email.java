@@ -3,7 +3,7 @@ package br.ufrj.ad.spamclassifier.model;
 import java.util.LinkedHashMap;
 
 public class Email {
-
+	
 	/**
 	 * 48 continuous real [0,100] attributes of type word_freq_WORD
 	 * = percentage of words in the e-mail that match WORD,
@@ -65,7 +65,7 @@ public class Email {
 	public Float getWordFrequency(String word) {
 		return mWordFreqMap.get(word);
 	}
-
+	
 	public void setCharFrequency(char character, Float frequency) {
 		mCharFreqMap.put(String.valueOf(character), frequency);
 	}
@@ -73,7 +73,15 @@ public class Email {
 	public Float getCharFrequency(char character) {
 		return mCharFreqMap.get(String.valueOf(character));
 	}
-
+	
+	public Float getFeatureFrequency(String feature) {
+		if (mWordFreqMap.keySet().contains(feature)) {
+			return getWordFrequency(feature);
+		} else {
+			return getCharFrequency(feature.charAt(0));
+		}
+	}
+	
 	public Float getAvgUninterruptedCapitals() {
 		return mAverageUninterruptedCapitals;
 	}

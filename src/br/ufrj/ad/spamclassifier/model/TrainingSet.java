@@ -15,63 +15,162 @@ public class TrainingSet {
 		SPAM, HAM;
 	}
 	
-	private Collection<String> words;
-	private Collection<? extends Email> emails;
-	private HashMap<String, Float> spamProbability;
-	private HashMap<String, Float> hamProbability;
+	private Collection<String> mWords;
+	private Collection<String> mCharacters;
+	private Collection<? extends Email> mEmails;
+	private HashMap<String, Float> mSpamProbability;
+	private HashMap<String, Float> mHamProbability;
+	private HashMap<Classification, Float> mAvgUnintCaptsBounds;
+	private HashMap<Classification, Float> mLngstUnintCaptsLenBounds;
+	private HashMap<Classification, Float> mCaptsNumBounds;
 
-	public TrainingSet(Collection<String> words, Collection<? extends Email> emails) {
-		this.words = words;
-		this.emails = emails;
-		this.spamProbability = new HashMap<String, Float>();
-		this.hamProbability = new HashMap<String, Float>();
+	public TrainingSet(Collection<String> words, Collection<String> characters,
+			Collection<? extends Email> emails) {
+		this.mWords = words;
+		this.mCharacters = characters;
+		this.mEmails = emails;
+		
+		this.mSpamProbability = new HashMap<String, Float>();
+		this.mHamProbability = new HashMap<String, Float>();
 		
 		init();
 	}
 
 	private void init() {
-		for (String word : words) {
-			Integer spamsContainingWord = 0;
-			Integer spamsNotContainingWord = 0;
+		calcProbabilityMapForFeatures(mWords);
+		calcProbabilityMapForFeatures(mCharacters);
+		mAvgUnintCaptsBounds = getRatiosForAverageUninterruptedCapitals();
+		mLngstUnintCaptsLenBounds = getRatiosForLongestUninterruptedCapitalsLength();
+		mCaptsNumBounds = getRatiosForCapitalsNumber();
+	}
+
+	private HashMap<Classification, Float> getRatiosForCapitalsNumber() {
+		Integer numSpamsInSet = 0;
+		Integer numHamsInSet = 0;
+		
+		Integer totalCapitalsInSpams = 0;
+		Integer totalCapitalsInHams = 0;
+
+		for (Email email : mEmails) {
+			if (email.isSpam()) {
+				numSpamsInSet++;
+
+				totalCapitalsInSpams += email.getNumberOfCapitals();
+			} else {
+				numHamsInSet++;
+				
+				totalCapitalsInHams += email.getNumberOfCapitals();
+			}
+		}
+		
+		float spamsRatio = (float) totalCapitalsInSpams / numSpamsInSet;
+		float hamsRatio = (float) totalCapitalsInHams / numHamsInSet;
+		
+		HashMap<Classification, Float> ratios = new HashMap<Classification, Float>();
+		ratios.put(Classification.SPAM, spamsRatio);
+		ratios.put(Classification.HAM, hamsRatio);
+		return ratios;
+	}
+
+	private HashMap<Classification, Float> getRatiosForLongestUninterruptedCapitalsLength() {
+		Integer numSpamsInSet = 0;
+		Integer numHamsInSet = 0;
+		
+		Integer totalLngstUnintCapitalsInSpams = 0;
+		Integer totalLngstUnintCapitalsInHams = 0;
+
+		for (Email email : mEmails) {
+			if (email.isSpam()) {
+				numSpamsInSet++;
+
+				totalLngstUnintCapitalsInSpams += email.getLongestUninterruptedCapitalsLength();
+			} else {
+				numHamsInSet++;
+				
+				totalLngstUnintCapitalsInHams += email.getLongestUninterruptedCapitalsLength();
+			}
+		}
+		
+		float spamsRatio = (float) totalLngstUnintCapitalsInSpams / numSpamsInSet;
+		float hamsRatio = (float) totalLngstUnintCapitalsInHams / numHamsInSet;
+		
+		HashMap<Classification, Float> ratios = new HashMap<Classification, Float>();
+		ratios.put(Classification.SPAM, spamsRatio);
+		ratios.put(Classification.HAM, hamsRatio);
+		return ratios;
+	}
+
+	private HashMap<Classification, Float> getRatiosForAverageUninterruptedCapitals() {
+		Integer numSpamsInSet = 0;
+		Integer numHamsInSet = 0;
+		
+		Float totalAvgUnintCapitalsInSpams = 0.0f;
+		Float totalAvgUnintCapitalsInHams = 0.0f;
+
+		for (Email email : mEmails) {
+			if (email.isSpam()) {
+				numSpamsInSet++;
+
+				totalAvgUnintCapitalsInSpams += email.getAvgUninterruptedCapitals();
+			} else {
+				numHamsInSet++;
+				
+				totalAvgUnintCapitalsInHams += email.getAvgUninterruptedCapitals();
+			}
+		}
+		
+		float spamsRatio = (float) totalAvgUnintCapitalsInSpams / numSpamsInSet;
+		float hamsRatio = (float) totalAvgUnintCapitalsInHams / numHamsInSet;
+		
+		HashMap<Classification, Float> ratios = new HashMap<Classification, Float>();
+		ratios.put(Classification.SPAM, spamsRatio);
+		ratios.put(Classification.HAM, hamsRatio);
+		return ratios;
+	}
+
+	private void calcProbabilityMapForFeatures(Collection<String> features) {
+		for (String feature : features) {
+			Integer spamsContainingFeature = 0;
+			Integer spamsNotContainingFeature = 0;
 			
-			Integer hamsContainingWord = 0;
-			Integer hamsNotContainingWord = 0;
+			Integer hamsContainingFeature = 0;
+			Integer hamsNotContainingFeature = 0;
 			
-			for (Email email : emails) {
+			for (Email email : mEmails) {
 				if (email.isSpam()) {
-					if (email.getWordFrequency(word) > 0) {
-						spamsContainingWord++;
+					if (email.getFeatureFrequency(feature) > 0) {
+						spamsContainingFeature++;
 					} else {
-						spamsNotContainingWord++;
+						spamsNotContainingFeature++;
 					}
 				} else {
-					if (email.getWordFrequency(word) > 0) {
-						hamsContainingWord++;
+					if (email.getFeatureFrequency(feature) > 0) {
+						hamsContainingFeature++;
 					} else {
-						hamsNotContainingWord++;
+						hamsNotContainingFeature++;
 					}
 				}
 			}
 
 			if (DEBUG) {
-				System.out.println("Spams containing '" + word + "': " + spamsContainingWord + ", Spams without '" + word + "': " + spamsNotContainingWord);
-				System.out.println("Hams containing '" + word + "': " + hamsContainingWord + ", Hams without '" + word + "': " + hamsNotContainingWord);
+				System.out.println("Spams containing '" + feature + "': " + spamsContainingFeature + ", Spams without '" + feature + "': " + spamsNotContainingFeature);
+				System.out.println("Hams containing '" + feature + "': " + hamsContainingFeature + ", Hams without '" + feature + "': " + hamsNotContainingFeature);
 			}
 			
-			float probWordGivenSpam = getProbabilityOfWordGivenSpam(word, spamsContainingWord, spamsNotContainingWord);
-			float probWordGivenHam = getProbabilityOfWordGivenHam(word, hamsContainingWord, hamsNotContainingWord);
+			float probFeatureGivenSpam = getProbabilityOfFeatureGivenSpam(feature, spamsContainingFeature, spamsNotContainingFeature);
+			float probFeatureGivenHam = getProbabilityOfFeatureGivenHam(feature, hamsContainingFeature, hamsNotContainingFeature);
 			
-			float probWord = getProbabilityOfWord(word, probWordGivenSpam, probWordGivenHam);
+			float probFeature = getProbabilityOfFeature(feature, probFeatureGivenSpam, probFeatureGivenHam);
 			
-			float probSpamGivenWord = getProbabilityOfSpamGivenWord(word, probWordGivenSpam, probWord);
-			float probHamGivenWord = getProbabilityOfHamGivenWord(word, probWordGivenHam, probWord);
+			float probSpamGivenFeature = getProbabilityOfSpamGivenFeature(feature, probFeatureGivenSpam, probFeature);
+			float probHamGivenFeature = getProbabilityOfHamGivenFeature(feature, probFeatureGivenHam, probFeature);
 			
-			spamProbability.put(word, probSpamGivenWord);
-			hamProbability.put(word, probHamGivenWord);
+			mSpamProbability.put(feature, probSpamGivenFeature);
+			mHamProbability.put(feature, probHamGivenFeature);
 		}
 	}
 
-	private float getProbabilityOfWordGivenSpam(String word, Integer spamsContainingWord, Integer spamsNotContainingWord) {
+	private float getProbabilityOfFeatureGivenSpam(String word, Integer spamsContainingWord, Integer spamsNotContainingWord) {
 		float probWordGivenSpam = (float) spamsContainingWord / (spamsContainingWord + spamsNotContainingWord);
 
 		if (DEBUG) {
@@ -80,7 +179,7 @@ public class TrainingSet {
 		return probWordGivenSpam;
 	}
 
-	private float getProbabilityOfWordGivenHam(String word, Integer hamsContainingWord, Integer hamsNotContainingWord) {
+	private float getProbabilityOfFeatureGivenHam(String word, Integer hamsContainingWord, Integer hamsNotContainingWord) {
 		float probWordGivenHam = (float) hamsContainingWord / (hamsContainingWord + hamsNotContainingWord);
 		
 		if (DEBUG) {
@@ -89,7 +188,7 @@ public class TrainingSet {
 		return probWordGivenHam;
 	}
 
-	private float getProbabilityOfHamGivenWord(String word, float probWordGivenHam, float probWord) {
+	private float getProbabilityOfHamGivenFeature(String word, float probWordGivenHam, float probWord) {
 		float probHamGivenWord = (float) (probWordGivenHam * PROBABILITY_HAM) / (probWord);
 
 		if (DEBUG) {
@@ -100,7 +199,7 @@ public class TrainingSet {
 		return probHamGivenWord;
 	}
 
-	private float getProbabilityOfSpamGivenWord(String word, float probWordGivenSpam, float probWord) {
+	private float getProbabilityOfSpamGivenFeature(String word, float probWordGivenSpam, float probWord) {
 		float probSpamGivenWord = (float) (probWordGivenSpam * PROBABILITY_SPAM) / (probWord);
 		
 		if (DEBUG) {
@@ -109,7 +208,7 @@ public class TrainingSet {
 		return probSpamGivenWord;
 	}
 
-	private float getProbabilityOfWord(String word, float probWordGivenSpam, float probWordGivenHam) {
+	private float getProbabilityOfFeature(String word, float probWordGivenSpam, float probWordGivenHam) {
 		float probWord = (PROBABILITY_SPAM * probWordGivenSpam) + (PROBABILITY_HAM * probWordGivenHam);
 
 		if (DEBUG) {
@@ -121,9 +220,21 @@ public class TrainingSet {
 	
 	public Float getProbability(Classification classification, String word) {
 		if (classification == Classification.SPAM) {
-			return spamProbability.get(word);
+			return mSpamProbability.get(word);
 		} else {
-			return hamProbability.get(word);
+			return mHamProbability.get(word);
 		}
+	}
+
+	public HashMap<Classification, Float> getAverageUninterruptedCapitalsBounds() {
+		return mAvgUnintCaptsBounds;
+	}
+
+	public HashMap<Classification, Float> getLongestUninterruptedCapitalsLengthBounds() {
+		return mLngstUnintCaptsLenBounds;
+	}
+
+	public HashMap<Classification, Float> getCapitalsNumberBounds() {
+		return mCaptsNumBounds;
 	}
 }
