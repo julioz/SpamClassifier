@@ -1,13 +1,12 @@
 package br.ufrj.ad.spamclassifier.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.List;
 
 import br.ufrj.ad.spamclassifier.model.TrainingSet.Classification;
+import br.ufrj.ad.spamclassifier.model.TrainingSet.FeatureType;
 
 public class TestSet {
-
-	private final static boolean DEBUG = false;
 
 	private TrainingSet mTrainingSet;
 	private ArrayList<Email> mTestList;
@@ -16,215 +15,109 @@ public class TestSet {
 		this.mTrainingSet = trainingSet;
 		this.mTestList = testList;
 	}
-
-	public Float executeForWordFeature(String word) {
-		Integer emailsContainingWord = 0;
+	
+	public Float executeForFeature(String feature) {
 		Integer emailsClassifiedCorrectly = 0;
-		for (Email email : this.mTestList) {
-			Float wordFrequency = email.getWordFrequency(word);
+		Integer emailsContainingFeature = 0;
+		
+		List<String> words = new ArrayList<String>();
+		words.add(feature.toString());
 
-			if (wordFrequency > 0) {
-				emailsContainingWord++;
-
-				Float spamProbability = mTrainingSet.getProbability(
-						Classification.SPAM, word);
-				Float hamProbability = mTrainingSet.getProbability(
-						Classification.HAM, word);
-
-				if (DEBUG) {
-					System.out.print("Email " + email.getPosition()
-							+ " classified as ");
-				}
-
-				if (spamProbability >= hamProbability) {
-					if (DEBUG)
-						System.out.print("spam.");
-
-					if (email.isSpam()) {
-						emailsClassifiedCorrectly++;
-
-						if (DEBUG) {
-							System.out.print(" -> Guessed right!");
-						}
-					}
+		for (Email email : mTestList) {
+			if (feature.equals(FeatureType.AVG_UNINT_CAPT.toString()) ||
+					feature.equals(FeatureType.LNGST_UNINT_CAPT.toString()) ||
+					feature.equals(FeatureType.NUM_CAPT.toString())) {
+				emailsContainingFeature++;
+			} else {
+				// WORD or CHAR
+				if (email.getFeatureFrequency(feature.toString()) > 0) {
+					emailsContainingFeature++;
 				} else {
-					if (DEBUG)
-						System.out.print("not spam.");
-
-					if (!email.isSpam()) {
-						emailsClassifiedCorrectly++;
-
-						if (DEBUG) {
-							System.out.print(" -> Guessed right!");
-						}
-					}
+					continue;
 				}
+			}
+			
+			Float probSpamGivenFeatures = getProductOfProbabilities(Classification.SPAM, words, email);
+			Float probHamGivenFeatures = getProductOfProbabilities(Classification.HAM, words, email);
+			Float probabilitySpam = (probSpamGivenFeatures * TrainingSet.PROBABILITY_SPAM) / ((probSpamGivenFeatures * TrainingSet.PROBABILITY_SPAM) + (probHamGivenFeatures * TrainingSet.PROBABILITY_HAM));
+			Float probabilityHam = (probHamGivenFeatures * TrainingSet.PROBABILITY_HAM) / ((probSpamGivenFeatures * TrainingSet.PROBABILITY_SPAM) + (probHamGivenFeatures * TrainingSet.PROBABILITY_HAM));
 
-				if (DEBUG) {
-					System.out.println();
+			if (email.isSpam()) {
+				if (probabilitySpam >= probabilityHam) {
+					emailsClassifiedCorrectly++;
 				}
 			} else {
-				if (DEBUG) {
-					System.out.println("Email " + email.getPosition()
-							+ " does not contain " + word);
+				if (probabilitySpam <= probabilityHam) {
+					emailsClassifiedCorrectly++;
 				}
 			}
 		}
-
-		Float accuracy = (float) emailsClassifiedCorrectly
-				/ emailsContainingWord;
-		return accuracy;
+		
+		return (float) emailsClassifiedCorrectly / emailsContainingFeature;
 	}
-
-	public Float executeForCharFeature(String character) {
-		Integer emailsContainingChar = 0;
+	
+	/**
+	 * return accuracy
+	 * @param featureType
+	 * @param words
+	 * @return
+	 */
+	public Float executeForFeatures(List<String> words) {
+		if (words.size() == 1) return executeForFeature(words.get(0).toString());
+		
 		Integer emailsClassifiedCorrectly = 0;
-		for (Email email : this.mTestList) {
-			Float charFrequency = email.getCharFrequency(character.charAt(0));
-
-			if (charFrequency > 0) {
-				emailsContainingChar++;
-
-				Float spamProbability = mTrainingSet.getProbability(
-						Classification.SPAM, character);
-				Float hamProbability = mTrainingSet.getProbability(
-						Classification.HAM, character);
-
-				if (DEBUG) {
-					System.out.print("Email " + email.getPosition()
-							+ " classified as ");
-				}
-
-				if (spamProbability >= hamProbability) {
-					if (DEBUG)
-						System.out.print("spam.");
-
-					if (email.isSpam()) {
-						emailsClassifiedCorrectly++;
-
-						if (DEBUG) {
-							System.out.print(" -> Guessed right!");
-						}
-					}
+		Integer emailsContainingAllFeatures = 0;
+		
+		for (Email email : mTestList) {
+			int containedFeatures = 0;
+			for (String word : words) {
+				if (word.equals(FeatureType.AVG_UNINT_CAPT.toString())
+						|| word.equals(FeatureType.LNGST_UNINT_CAPT.toString())
+						|| word.equals(FeatureType.NUM_CAPT.toString())) {
+					containedFeatures++;
 				} else {
-					if (DEBUG)
-						System.out.print("not spam.");
-
-					if (!email.isSpam()) {
-						emailsClassifiedCorrectly++;
-
-						if (DEBUG) {
-							System.out.print(" -> Guessed right!");
-						}
+					if (email.getFeatureFrequency(word) > 0) {
+						containedFeatures++;
 					}
 				}
-
-				if (DEBUG) {
-					System.out.println();
-				}
-			} else {
-				if (DEBUG) {
-					System.out.println("Email " + email.getPosition()
-							+ " does not contain " + character);
-				}
 			}
-		}
+			
+			// TODO not correct. We are currently evaluating only the emails that match
+			// all the features asked... but almost no email in our dataset actually
+			// has all those features... so, how can we execute the classifier for
+			// more than a feature at once? Should we ignore features if they're not present or
+			// count them in in both ways...?
+			if (containedFeatures == words.size()) {
+				emailsContainingAllFeatures++;
+			} else {
+				continue;
+			}
+			
+			Float probSpamGivenFeatures = getProductOfProbabilities(Classification.SPAM, words, email);
+			Float probHamGivenFeatures = getProductOfProbabilities(Classification.HAM, words, email);
+			Float probabilitySpam = (probSpamGivenFeatures * TrainingSet.PROBABILITY_SPAM) / ((probSpamGivenFeatures * TrainingSet.PROBABILITY_SPAM) + (probHamGivenFeatures * TrainingSet.PROBABILITY_HAM));
+			Float probabilityHam = (probHamGivenFeatures * TrainingSet.PROBABILITY_HAM) / ((probSpamGivenFeatures * TrainingSet.PROBABILITY_SPAM) + (probHamGivenFeatures * TrainingSet.PROBABILITY_HAM));
 
-		Float accuracy = (float) emailsClassifiedCorrectly
-				/ emailsContainingChar;
-		return accuracy;
-	}
-
-	public Float executeForAverageUnintCapitalsFeature() {
-		Integer emailsClassifiedCorrectly = 0;
-
-		for (Email email : this.mTestList) {
-			Float avgUnintCapts = email.getAvgUninterruptedCapitals();
-
-			HashMap<Classification, Float> bounds = mTrainingSet
-					.getAverageUninterruptedCapitalsBounds();
-			Float closest = getClosestValue(avgUnintCapts,
-					bounds.get(Classification.SPAM),
-					bounds.get(Classification.HAM));
-
-			if (closest == bounds.get(Classification.SPAM)) {
-				if (email.isSpam()) {
+			if (email.isSpam()) {
+				if (probabilitySpam >= probabilityHam) {
 					emailsClassifiedCorrectly++;
 				}
 			} else {
-				if (!email.isSpam()) {
+				if (probabilitySpam <= probabilityHam) {
 					emailsClassifiedCorrectly++;
 				}
 			}
 		}
-
-		Float accuracy = (float) emailsClassifiedCorrectly / mTestList.size();
-		return accuracy;
+		System.out.println(emailsClassifiedCorrectly + " / " + emailsContainingAllFeatures);
+		
+		return (float) emailsClassifiedCorrectly / emailsContainingAllFeatures;
 	}
 
-	public Float executeForLongestUnintCapitalsLengthFeature() {
-		Integer emailsClassifiedCorrectly = 0;
-
-		for (Email email : this.mTestList) {
-			Integer lngstUnintCapts = email
-					.getLongestUninterruptedCapitalsLength();
-
-			HashMap<Classification, Float> bounds = mTrainingSet
-					.getLongestUninterruptedCapitalsLengthBounds();
-			Float closest = getClosestValue(lngstUnintCapts,
-					bounds.get(Classification.SPAM),
-					bounds.get(Classification.HAM));
-
-			if (closest == bounds.get(Classification.SPAM)) {
-				if (email.isSpam()) {
-					emailsClassifiedCorrectly++;
-				}
-			} else {
-				if (!email.isSpam()) {
-					emailsClassifiedCorrectly++;
-				}
-			}
+	private float getProductOfProbabilities(Classification classification, List<String> words, Email email) {
+		float product = mTrainingSet.getProbability(classification, words.get(0), email);
+		for (int i = 1; i < words.size(); i++) {
+			product *= mTrainingSet.getProbability(classification, words.get(i), email);
 		}
-
-		Float accuracy = (float) emailsClassifiedCorrectly / mTestList.size();
-		return accuracy;
-	}
-
-	public Float executeForCapitalsNumber() {
-		Integer emailsClassifiedCorrectly = 0;
-
-		for (Email email : this.mTestList) {
-			Integer captsNum = email.getNumberOfCapitals();
-
-			HashMap<Classification, Float> bounds = mTrainingSet
-					.getCapitalsNumberBounds();
-			Float closest = getClosestValue(captsNum,
-					bounds.get(Classification.SPAM),
-					bounds.get(Classification.HAM));
-
-			if (closest == bounds.get(Classification.SPAM)) {
-				if (email.isSpam()) {
-					emailsClassifiedCorrectly++;
-				}
-			} else {
-				if (!email.isSpam()) {
-					emailsClassifiedCorrectly++;
-				}
-			}
-		}
-
-		Float accuracy = (float) emailsClassifiedCorrectly / mTestList.size();
-		return accuracy;
-	}
-
-	private float getClosestValue(float value, float firstValue,
-			float secondValue) {
-		float distanceFromFirst = Math.abs(firstValue - value);
-		float distanceFromSecond = Math.abs(secondValue - value);
-		if (distanceFromFirst < distanceFromSecond) {
-			return firstValue;
-		} else {
-			return secondValue;
-		}
+		return product;
 	}
 }

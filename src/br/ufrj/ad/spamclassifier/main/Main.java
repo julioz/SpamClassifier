@@ -13,13 +13,14 @@ import br.ufrj.ad.spamclassifier.database.Parser;
 import br.ufrj.ad.spamclassifier.model.Email;
 import br.ufrj.ad.spamclassifier.model.TestSet;
 import br.ufrj.ad.spamclassifier.model.TrainingSet;
+import br.ufrj.ad.spamclassifier.model.TrainingSet.FeatureType;
 
 public class Main {
 
 	private static final double TRAINING_PERCENTAGE = 0.8;
-	private static final String FLAG_AVG_UNINT_CAPTS = "AVG_UNINT_CAPTS";
-	private static final String FLAG_LNGST_UNINT_CAPTS_LEN = "LNGST_UNINT_CAPTS_LEN";
-	private static final String FLAG_CAPTS_NUM = "CAPTS_NUM";
+//	private static final String FLAG_AVG_UNINT_CAPTS = "AVG_UNINT_CAPTS";
+//	private static final String FLAG_LNGST_UNINT_CAPTS_LEN = "LNGST_UNINT_CAPTS_LEN";
+//	private static final String FLAG_CAPTS_NUM = "CAPTS_NUM";
 
 	public static void main(String[] args) throws IOException {
 		ArrayList<Email> emails = Parser.parseDatabase();
@@ -39,7 +40,34 @@ public class Main {
 		TrainingSet trainingSet = new TrainingSet(Parser.getWords(),
 				Parser.getChars(), trainingList);
 		TestSet testSet = new TestSet(trainingSet, testList);
+		
+		executeUsingAllFeatures(testSet);
+	}
+	
+	private static void executeUsingAllFeatures(TestSet testSet) {
+		ArrayList<String> features = new ArrayList<String>();
+		features.addAll(Parser.getWords());
+		features.addAll(Parser.getChars());
+		features.add(FeatureType.AVG_UNINT_CAPT.toString());
+		features.add(FeatureType.LNGST_UNINT_CAPT.toString());
+		features.add(FeatureType.NUM_CAPT.toString());
+		
+		System.out.println(testSet.executeForFeatures(features));
+	}
+	
+	private static void executeUsingTenFeatures(TestSet testSet) {
+		ArrayList<String> features = new ArrayList<String>();
+		features.add(";");
+		features.add(FeatureType.AVG_UNINT_CAPT.toString());
+		features.add(FeatureType.LNGST_UNINT_CAPT.toString());
+		features.add(FeatureType.NUM_CAPT.toString());
+		features.add("cs");
+		features.add("free");
+		
+		System.out.println(testSet.executeForFeatures(features));
+	}
 
+	private static void executeUsingOneFeature(TestSet testSet) {
 		// Run the TestSet in each of the features and
 		// get their accuracy when classifying
 		HashMap<String, Float> accuracyMap = buildAccuracyMap(testSet);
@@ -52,19 +80,34 @@ public class Main {
 
 		System.out.println();
 
+		int numFeatures = 4;
+		List<Entry<String, Float>> bestFeatures = getBestFeatures(numFeatures, accuracyMap);
+		System.out.println("Picking " + numFeatures + " best features based on accuracy:");
+		for (int i = 0; i < bestFeatures.size(); i++) {
+			Entry<String, Float> entry = bestFeatures.get(i);
+			System.out.println((i+1) + ": " + entry.getKey() + " -> " + entry.getValue());
+		}
+
 		// Getting the maximum accuracy from the map
 		// to choose the best feature to select
-		float maxValueInMap = Collections.max(accuracyMap.values());
-		for (Entry<String, Float> entry : accuracyMap.entrySet()) {
-			if (entry.getValue().floatValue() == maxValueInMap) {
-				float percentage = entry.getValue() * 100f;
-				System.out.println("Choose feature '" + entry.getKey()
-						+ "' for an accuracy of " + percentage + "%");
-			}
-		}
+//		float maxValueInMap = Collections.max(accuracyMap.values());
+//		for (Entry<String, Float> entry : accuracyMap.entrySet()) {
+//			if (entry.getValue().floatValue() == maxValueInMap) {
+//				float percentage = entry.getValue() * 100f;
+//				System.out.println("Choose feature '" + entry.getKey()
+//						+ "' for an accuracy of " + percentage + "%");
+//			}
+//		}
 	}
 
-	private static void printMap(HashMap<String, Float> accuracyMap,
+	private static List<Entry<String, Float>> getBestFeatures(int numFeatures,
+			HashMap<String, Float> accuracyMap) {
+		List<Entry<String, Float>> sortedMapEntries = getSortedMapEntries(accuracyMap, true);
+
+		return new ArrayList<Entry<String, Float>>(sortedMapEntries.subList(0, numFeatures));
+	}
+	
+	private static List<Entry<String, Float>> getSortedMapEntries(HashMap<String, Float> accuracyMap,
 			final boolean descending) {
 		List<Map.Entry<String, Float>> entries = new ArrayList<Map.Entry<String, Float>>(
 				accuracyMap.entrySet());
@@ -77,7 +120,14 @@ public class Main {
 						* e1.getValue().compareTo(e2.getValue());
 			}
 		});
+		
+		return entries;
+	}
 
+	private static void printMap(HashMap<String, Float> accuracyMap,
+			final boolean descending) {
+		List<Map.Entry<String, Float>> entries = getSortedMapEntries(accuracyMap, descending);
+		
 		System.out.print("{ ");
 		for (Map.Entry<String, Float> entry : entries) {
 			System.out.print(entry.getKey() + " = " + entry.getValue() + ", ");
@@ -89,20 +139,23 @@ public class Main {
 		HashMap<String, Float> accuracyMap = new HashMap<String, Float>();
 
 		for (String word : Parser.getWords()) {
-			Float accuracy = testSet.executeForWordFeature(word);
+			Float accuracy = testSet.executeForFeature(word);
 			accuracyMap.put(word, accuracy);
 		}
 
 		for (String character : Parser.getChars()) {
-			Float accuracy = testSet.executeForCharFeature(character);
+			Float accuracy = testSet.executeForFeature(character);
 			accuracyMap.put(character, accuracy);
 		}
 
-		accuracyMap.put(FLAG_AVG_UNINT_CAPTS,
-				testSet.executeForAverageUnintCapitalsFeature());
-		accuracyMap.put(FLAG_LNGST_UNINT_CAPTS_LEN,
-				testSet.executeForLongestUnintCapitalsLengthFeature());
-		accuracyMap.put(FLAG_CAPTS_NUM, testSet.executeForCapitalsNumber());
+		accuracyMap.put(FeatureType.AVG_UNINT_CAPT.toString(),
+				testSet.executeForFeature(FeatureType.AVG_UNINT_CAPT.toString()));
+
+		accuracyMap.put(FeatureType.LNGST_UNINT_CAPT.toString(),
+				testSet.executeForFeature(FeatureType.LNGST_UNINT_CAPT.toString()));
+
+		accuracyMap.put(FeatureType.NUM_CAPT.toString(),
+				testSet.executeForFeature(FeatureType.NUM_CAPT.toString()));
 
 		return accuracyMap;
 	}

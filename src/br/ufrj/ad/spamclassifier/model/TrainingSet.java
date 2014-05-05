@@ -3,26 +3,38 @@ package br.ufrj.ad.spamclassifier.model;
 import java.util.Collection;
 import java.util.HashMap;
 
+import br.ufrj.ad.spamclassifier.database.Parser;
+
 public class TrainingSet {
+	
+	public enum FeatureType {
+		WORD, CHAR, AVG_UNINT_CAPT, LNGST_UNINT_CAPT, NUM_CAPT;
+	}
 	
 	// set to true to see prints
 	private final static boolean DEBUG = false;
 	
-	private final static float PROBABILITY_SPAM = 0.5f;
-	private final static float PROBABILITY_HAM = 0.5f;
+	public final static float PROBABILITY_SPAM = 0.5f;
+	public final static float PROBABILITY_HAM = 0.5f;
 
 	public enum Classification {
 		SPAM, HAM;
 	}
+	
+	private float MAX_AVG_UNINT_CAPT = Integer.MIN_VALUE;
+	private float MIN_AVG_UNINT_CAPT = Integer.MAX_VALUE;
+	
+	private float MAX_LNGST_UNINT_CAPT = Integer.MIN_VALUE;
+	private float MIN_LNGST_UNINT_CAPT = Integer.MAX_VALUE;
+	
+	private float MAX_NUM_CAPT = Integer.MIN_VALUE;
+	private float MIN_NUM_CAPT = Integer.MAX_VALUE;
 	
 	private Collection<String> mWords;
 	private Collection<String> mCharacters;
 	private Collection<? extends Email> mEmails;
 	private HashMap<String, Float> mSpamProbability;
 	private HashMap<String, Float> mHamProbability;
-	private HashMap<Classification, Float> mAvgUnintCaptsBounds;
-	private HashMap<Classification, Float> mLngstUnintCaptsLenBounds;
-	private HashMap<Classification, Float> mCaptsNumBounds;
 
 	public TrainingSet(Collection<String> words, Collection<String> characters,
 			Collection<? extends Email> emails) {
@@ -39,12 +51,13 @@ public class TrainingSet {
 	private void init() {
 		calcProbabilityMapForFeatures(mWords);
 		calcProbabilityMapForFeatures(mCharacters);
-		mAvgUnintCaptsBounds = getRatiosForAverageUninterruptedCapitals();
-		mLngstUnintCaptsLenBounds = getRatiosForLongestUninterruptedCapitalsLength();
-		mCaptsNumBounds = getRatiosForCapitalsNumber();
+		calcProbabilityForAverageUninterruptedCapitals();
+		calcProbabilityForLongestUninterruptedCapitalsLength();
+		calcProbabilityForCapitalsNumber();
 	}
 
-	private HashMap<Classification, Float> getRatiosForCapitalsNumber() {
+	// TODO see to-do below
+	private void calcProbabilityForCapitalsNumber() {
 		Integer numSpamsInSet = 0;
 		Integer numHamsInSet = 0;
 		
@@ -52,27 +65,37 @@ public class TrainingSet {
 		Integer totalCapitalsInHams = 0;
 
 		for (Email email : mEmails) {
+			Integer numberOfCapitals = email.getNumberOfCapitals();
+			
+			MAX_NUM_CAPT = Math.max(MAX_NUM_CAPT, numberOfCapitals);
+			MIN_NUM_CAPT = Math.min(MIN_NUM_CAPT, numberOfCapitals);
+			
 			if (email.isSpam()) {
 				numSpamsInSet++;
 
-				totalCapitalsInSpams += email.getNumberOfCapitals();
+				totalCapitalsInSpams += numberOfCapitals;
 			} else {
 				numHamsInSet++;
 				
-				totalCapitalsInHams += email.getNumberOfCapitals();
+				totalCapitalsInHams += numberOfCapitals;
 			}
 		}
 		
 		float spamsRatio = (float) totalCapitalsInSpams / numSpamsInSet;
 		float hamsRatio = (float) totalCapitalsInHams / numHamsInSet;
 		
-		HashMap<Classification, Float> ratios = new HashMap<Classification, Float>();
-		ratios.put(Classification.SPAM, spamsRatio);
-		ratios.put(Classification.HAM, hamsRatio);
-		return ratios;
+		mSpamProbability.put(FeatureType.NUM_CAPT.toString(), spamsRatio);
+		mHamProbability.put(FeatureType.NUM_CAPT.toString(), hamsRatio);
 	}
 
-	private HashMap<Classification, Float> getRatiosForLongestUninterruptedCapitalsLength() {
+	// TODO: How to train for this kind of feature? Currently, we are using the following method:
+	// sum up all capitals and divide them by the number of emails (spams or hams) to get
+	// the average number of capitals in each case.
+	// But then, how to define a probability given an email from the Test Set ?
+	// Intuitively, just knowing the number of capitals on that email could give us
+	// 100 or 0% of chance to define if it is a spam or not... but that's not good
+	// for our classifier, is it? So we kinda get 'how close' we are from each value... still not good
+	private void calcProbabilityForLongestUninterruptedCapitalsLength() {
 		Integer numSpamsInSet = 0;
 		Integer numHamsInSet = 0;
 		
@@ -80,27 +103,31 @@ public class TrainingSet {
 		Integer totalLngstUnintCapitalsInHams = 0;
 
 		for (Email email : mEmails) {
+			Integer longestUninterruptedCapitalsLength = email.getLongestUninterruptedCapitalsLength();
+			
+			MAX_LNGST_UNINT_CAPT = Math.max(MAX_LNGST_UNINT_CAPT, longestUninterruptedCapitalsLength);
+			MIN_LNGST_UNINT_CAPT = Math.min(MIN_LNGST_UNINT_CAPT, longestUninterruptedCapitalsLength);
+			
 			if (email.isSpam()) {
 				numSpamsInSet++;
 
-				totalLngstUnintCapitalsInSpams += email.getLongestUninterruptedCapitalsLength();
+				totalLngstUnintCapitalsInSpams += longestUninterruptedCapitalsLength;
 			} else {
 				numHamsInSet++;
 				
-				totalLngstUnintCapitalsInHams += email.getLongestUninterruptedCapitalsLength();
+				totalLngstUnintCapitalsInHams += longestUninterruptedCapitalsLength;
 			}
 		}
 		
 		float spamsRatio = (float) totalLngstUnintCapitalsInSpams / numSpamsInSet;
 		float hamsRatio = (float) totalLngstUnintCapitalsInHams / numHamsInSet;
 		
-		HashMap<Classification, Float> ratios = new HashMap<Classification, Float>();
-		ratios.put(Classification.SPAM, spamsRatio);
-		ratios.put(Classification.HAM, hamsRatio);
-		return ratios;
+		mSpamProbability.put(FeatureType.LNGST_UNINT_CAPT.toString(), spamsRatio);
+		mHamProbability.put(FeatureType.LNGST_UNINT_CAPT.toString(), hamsRatio);
 	}
 
-	private HashMap<Classification, Float> getRatiosForAverageUninterruptedCapitals() {
+	// TODO see to-do above
+	private void calcProbabilityForAverageUninterruptedCapitals() {
 		Integer numSpamsInSet = 0;
 		Integer numHamsInSet = 0;
 		
@@ -108,24 +135,27 @@ public class TrainingSet {
 		Float totalAvgUnintCapitalsInHams = 0.0f;
 
 		for (Email email : mEmails) {
+			Float avgUninterruptedCapitals = email.getAvgUninterruptedCapitals();
+			
+			MAX_AVG_UNINT_CAPT = Math.max(MAX_AVG_UNINT_CAPT, avgUninterruptedCapitals);
+			MIN_AVG_UNINT_CAPT = Math.min(MIN_AVG_UNINT_CAPT, avgUninterruptedCapitals);
+			
 			if (email.isSpam()) {
 				numSpamsInSet++;
 
-				totalAvgUnintCapitalsInSpams += email.getAvgUninterruptedCapitals();
+				totalAvgUnintCapitalsInSpams += avgUninterruptedCapitals;
 			} else {
 				numHamsInSet++;
 				
-				totalAvgUnintCapitalsInHams += email.getAvgUninterruptedCapitals();
+				totalAvgUnintCapitalsInHams += avgUninterruptedCapitals;
 			}
 		}
 		
 		float spamsRatio = (float) totalAvgUnintCapitalsInSpams / numSpamsInSet;
 		float hamsRatio = (float) totalAvgUnintCapitalsInHams / numHamsInSet;
 		
-		HashMap<Classification, Float> ratios = new HashMap<Classification, Float>();
-		ratios.put(Classification.SPAM, spamsRatio);
-		ratios.put(Classification.HAM, hamsRatio);
-		return ratios;
+		mSpamProbability.put(FeatureType.AVG_UNINT_CAPT.toString(), spamsRatio);
+		mHamProbability.put(FeatureType.AVG_UNINT_CAPT.toString(), hamsRatio);
 	}
 
 	private void calcProbabilityMapForFeatures(Collection<String> features) {
@@ -218,23 +248,41 @@ public class TrainingSet {
 		return probWord;
 	}
 	
-	public Float getProbability(Classification classification, String word) {
-		if (classification == Classification.SPAM) {
-			return mSpamProbability.get(word);
+	public Float getProbability(Classification classification, String feature, Email email) {
+		if (Parser.getWords().contains(feature) || Parser.getChars().contains(feature)) {
+			if (classification == Classification.SPAM) {
+				return mSpamProbability.get(feature);
+			} else {
+				return mHamProbability.get(feature);
+			}
 		} else {
-			return mHamProbability.get(word);
+			if (feature.equals(FeatureType.AVG_UNINT_CAPT.toString())) {
+				return getProbabilityOutOf(email.getAvgUninterruptedCapitals(),
+						MAX_AVG_UNINT_CAPT, MIN_AVG_UNINT_CAPT, classification);
+			} else if (feature.equals(FeatureType.LNGST_UNINT_CAPT.toString())) {
+				return getProbabilityOutOf(
+						(float) email.getLongestUninterruptedCapitalsLength(),
+						MAX_LNGST_UNINT_CAPT, MIN_LNGST_UNINT_CAPT,
+						classification);
+			} else {
+				return getProbabilityOutOf((float) email.getNumberOfCapitals(),
+						MAX_NUM_CAPT, MIN_NUM_CAPT, classification);
+			}
 		}
 	}
 
-	public HashMap<Classification, Float> getAverageUninterruptedCapitalsBounds() {
-		return mAvgUnintCaptsBounds;
-	}
-
-	public HashMap<Classification, Float> getLongestUninterruptedCapitalsLengthBounds() {
-		return mLngstUnintCaptsLenBounds;
-	}
-
-	public HashMap<Classification, Float> getCapitalsNumberBounds() {
-		return mCaptsNumBounds;
+	private Float getProbabilityOutOf(Float value, float maxValue, float minValue, Classification classification) {
+		Float spamValue = maxValue;
+		Float hamValue = minValue;
+		
+		float distToSpam = Math.abs(value - spamValue);
+		float distToHam = Math.abs(value - hamValue);
+		float numberScaleSize = maxValue - minValue;
+		
+		if (classification == Classification.SPAM) {
+			return distToHam / numberScaleSize;
+		} else {
+			return distToSpam / numberScaleSize;
+		}
 	}
 }
