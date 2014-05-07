@@ -51,12 +51,10 @@ public class TrainingSet {
 	private void init() {
 		calcProbabilityMapForFeatures(mWords);
 		calcProbabilityMapForFeatures(mCharacters);
-		calcProbabilityForAverageUninterruptedCapitals();
-		calcProbabilityForLongestUninterruptedCapitalsLength();
-		calcProbabilityForCapitalsNumber();
 	}
 
-	// TODO see to-do below
+	// see comment below
+	@SuppressWarnings("unused")
 	private void calcProbabilityForCapitalsNumber() {
 		Integer numSpamsInSet = 0;
 		Integer numHamsInSet = 0;
@@ -88,13 +86,16 @@ public class TrainingSet {
 		mHamProbability.put(FeatureType.NUM_CAPT.toString(), hamsRatio);
 	}
 
-	// TODO: How to train for this kind of feature? Currently, we are using the following method:
+	// How to train for this kind of feature? Currently, we are using the following method:
 	// sum up all capitals and divide them by the number of emails (spams or hams) to get
 	// the average number of capitals in each case.
 	// But then, how to define a probability given an email from the Test Set ?
 	// Intuitively, just knowing the number of capitals on that email could give us
 	// 100 or 0% of chance to define if it is a spam or not... but that's not good
 	// for our classifier, is it? So we kinda get 'how close' we are from each value... still not good
+	// For the purpose of this work, we will ignore these kind of feature, in a way that we are only
+	// going to use the 54 features made of words and characters out of the 57 available.
+	@SuppressWarnings("unused")
 	private void calcProbabilityForLongestUninterruptedCapitalsLength() {
 		Integer numSpamsInSet = 0;
 		Integer numHamsInSet = 0;
@@ -126,7 +127,8 @@ public class TrainingSet {
 		mHamProbability.put(FeatureType.LNGST_UNINT_CAPT.toString(), hamsRatio);
 	}
 
-	// TODO see to-do above
+	// see comment above
+	@SuppressWarnings("unused")
 	private void calcProbabilityForAverageUninterruptedCapitals() {
 		Integer numSpamsInSet = 0;
 		Integer numHamsInSet = 0;

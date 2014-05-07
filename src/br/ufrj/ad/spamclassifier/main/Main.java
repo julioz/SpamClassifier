@@ -13,14 +13,10 @@ import br.ufrj.ad.spamclassifier.database.Parser;
 import br.ufrj.ad.spamclassifier.model.Email;
 import br.ufrj.ad.spamclassifier.model.TestSet;
 import br.ufrj.ad.spamclassifier.model.TrainingSet;
-import br.ufrj.ad.spamclassifier.model.TrainingSet.FeatureType;
 
 public class Main {
 
 	private static final double TRAINING_PERCENTAGE = 0.8;
-//	private static final String FLAG_AVG_UNINT_CAPTS = "AVG_UNINT_CAPTS";
-//	private static final String FLAG_LNGST_UNINT_CAPTS_LEN = "LNGST_UNINT_CAPTS_LEN";
-//	private static final String FLAG_CAPTS_NUM = "CAPTS_NUM";
 
 	public static void main(String[] args) throws IOException {
 		ArrayList<Email> emails = Parser.parseDatabase();
@@ -48,21 +44,27 @@ public class Main {
 		ArrayList<String> features = new ArrayList<String>();
 		features.addAll(Parser.getWords());
 		features.addAll(Parser.getChars());
-		features.add(FeatureType.AVG_UNINT_CAPT.toString());
-		features.add(FeatureType.LNGST_UNINT_CAPT.toString());
-		features.add(FeatureType.NUM_CAPT.toString());
 		
+		System.out.println(features.size() + " features analyzed");
 		System.out.println(testSet.executeForFeatures(features));
 	}
 	
 	private static void executeUsingTenFeatures(TestSet testSet) {
-		ArrayList<String> features = new ArrayList<String>();
-		features.add(";");
-		features.add(FeatureType.AVG_UNINT_CAPT.toString());
-		features.add(FeatureType.LNGST_UNINT_CAPT.toString());
-		features.add(FeatureType.NUM_CAPT.toString());
-		features.add("cs");
-		features.add("free");
+		// select ten features at random
+		List<String> features = new ArrayList<String>();
+		features.addAll(Parser.getWords());
+		features.addAll(Parser.getChars());
+		Collections.shuffle(features);
+		features = features.subList(0, 10);
+		
+		System.out.println(features.size() + " features analyzed:");
+		for (int i = 0; i < features.size(); i++) {
+			System.out.print(features.get(i));
+			if (i != features.size() - 1) {
+				System.out.print(", ");
+			}
+		}
+		System.out.println();
 		
 		System.out.println(testSet.executeForFeatures(features));
 	}
@@ -70,9 +72,9 @@ public class Main {
 	private static void executeUsingOneFeature(TestSet testSet) {
 		// Run the TestSet in each of the features and
 		// get their accuracy when classifying
-		HashMap<String, Float> accuracyMap = buildAccuracyMap(testSet);
+		HashMap<String, Double> accuracyMap = buildAccuracyMap(testSet);
 
-		System.out.println(accuracyMap.size() + " analyzed features");
+		System.out.println(accuracyMap.size() + " analyzed features (individually)");
 
 		// Uncomment to see the accuracy of the
 		// classification for each feature
@@ -81,10 +83,10 @@ public class Main {
 		System.out.println();
 
 		int numFeatures = 4;
-		List<Entry<String, Float>> bestFeatures = getBestFeatures(numFeatures, accuracyMap);
+		List<Entry<String, Double>> bestFeatures = getBestFeatures(numFeatures, accuracyMap);
 		System.out.println("Picking " + numFeatures + " best features based on accuracy:");
 		for (int i = 0; i < bestFeatures.size(); i++) {
-			Entry<String, Float> entry = bestFeatures.get(i);
+			Entry<String, Double> entry = bestFeatures.get(i);
 			System.out.println((i+1) + ": " + entry.getKey() + " -> " + entry.getValue());
 		}
 
@@ -100,22 +102,22 @@ public class Main {
 //		}
 	}
 
-	private static List<Entry<String, Float>> getBestFeatures(int numFeatures,
-			HashMap<String, Float> accuracyMap) {
-		List<Entry<String, Float>> sortedMapEntries = getSortedMapEntries(accuracyMap, true);
+	private static List<Entry<String, Double>> getBestFeatures(int numFeatures,
+			HashMap<String, Double> accuracyMap) {
+		List<Entry<String, Double>> sortedMapEntries = getSortedMapEntries(accuracyMap, true);
 
-		return new ArrayList<Entry<String, Float>>(sortedMapEntries.subList(0, numFeatures));
+		return new ArrayList<Entry<String, Double>>(sortedMapEntries.subList(0, numFeatures));
 	}
 	
-	private static List<Entry<String, Float>> getSortedMapEntries(HashMap<String, Float> accuracyMap,
+	private static List<Entry<String, Double>> getSortedMapEntries(HashMap<String, Double> accuracyMap,
 			final boolean descending) {
-		List<Map.Entry<String, Float>> entries = new ArrayList<Map.Entry<String, Float>>(
+		List<Map.Entry<String, Double>> entries = new ArrayList<Map.Entry<String, Double>>(
 				accuracyMap.entrySet());
-		Collections.sort(entries, new Comparator<Map.Entry<String, Float>>() {
+		Collections.sort(entries, new Comparator<Map.Entry<String, Double>>() {
 			@Override
-			public int compare(Entry<String, Float> o1, Entry<String, Float> o2) {
-				Map.Entry<String, Float> e1 = (Map.Entry<String, Float>) o1;
-				Map.Entry<String, Float> e2 = (Map.Entry<String, Float>) o2;
+			public int compare(Entry<String, Double> o1, Entry<String, Double> o2) {
+				Map.Entry<String, Double> e1 = (Map.Entry<String, Double>) o1;
+				Map.Entry<String, Double> e2 = (Map.Entry<String, Double>) o2;
 				return (descending ? -1 : 1)
 						* e1.getValue().compareTo(e2.getValue());
 			}
@@ -124,38 +126,29 @@ public class Main {
 		return entries;
 	}
 
-	private static void printMap(HashMap<String, Float> accuracyMap,
+	private static void printMap(HashMap<String, Double> accuracyMap,
 			final boolean descending) {
-		List<Map.Entry<String, Float>> entries = getSortedMapEntries(accuracyMap, descending);
+		List<Map.Entry<String, Double>> entries = getSortedMapEntries(accuracyMap, descending);
 		
 		System.out.print("{ ");
-		for (Map.Entry<String, Float> entry : entries) {
+		for (Map.Entry<String, Double> entry : entries) {
 			System.out.print(entry.getKey() + " = " + entry.getValue() + ", ");
 		}
 		System.out.println(" }");
 	}
 
-	private static HashMap<String, Float> buildAccuracyMap(TestSet testSet) {
-		HashMap<String, Float> accuracyMap = new HashMap<String, Float>();
+	private static HashMap<String, Double> buildAccuracyMap(TestSet testSet) {
+		HashMap<String, Double> accuracyMap = new HashMap<String, Double>();
 
 		for (String word : Parser.getWords()) {
-			Float accuracy = testSet.executeForFeature(word);
+			Double accuracy = testSet.executeForFeature(word);
 			accuracyMap.put(word, accuracy);
 		}
 
 		for (String character : Parser.getChars()) {
-			Float accuracy = testSet.executeForFeature(character);
+			Double accuracy = testSet.executeForFeature(character);
 			accuracyMap.put(character, accuracy);
 		}
-
-		accuracyMap.put(FeatureType.AVG_UNINT_CAPT.toString(),
-				testSet.executeForFeature(FeatureType.AVG_UNINT_CAPT.toString()));
-
-		accuracyMap.put(FeatureType.LNGST_UNINT_CAPT.toString(),
-				testSet.executeForFeature(FeatureType.LNGST_UNINT_CAPT.toString()));
-
-		accuracyMap.put(FeatureType.NUM_CAPT.toString(),
-				testSet.executeForFeature(FeatureType.NUM_CAPT.toString()));
 
 		return accuracyMap;
 	}
