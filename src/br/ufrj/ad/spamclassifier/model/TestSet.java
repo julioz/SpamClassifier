@@ -79,8 +79,7 @@ public class TestSet {
 			emailsClassifiedCorrectly += isClassificationCorrect(probs, email);
 		}
 		
-		System.out.println("========================================");
-		System.out.println(emailsClassifiedCorrectly + " / " + mTestList.size());
+		// System.out.println("========================================");
 		
 		return (double) emailsClassifiedCorrectly / mTestList.size();
 	}

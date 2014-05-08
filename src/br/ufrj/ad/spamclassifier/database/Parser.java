@@ -78,4 +78,8 @@ public class Parser {
 		}
 		return mChars;
 	}
+	
+	public static int getNumberOfFeatures() {
+		return mWords.size() + mChars.size();
+	}
 }
