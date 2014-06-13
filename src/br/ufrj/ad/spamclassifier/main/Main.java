@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Scanner;
 
 import br.ufrj.ad.spamclassifier.database.Parser;
-import br.ufrj.ad.spamclassifier.main.ClassifierRunner.Classifier;
+import br.ufrj.ad.spamclassifier.main.BaseClassifierRunner.Classifier;
 import br.ufrj.ad.spamclassifier.model.Email;
 
 public class Main {
@@ -42,6 +42,27 @@ public class Main {
 		}
 		
 		System.out.println("Okay, you chose #" + userFeatureChoice + ".");
+		
+		int distributionType = -1;
+		while(distributionType < 1) {
+			System.out.println("What kind of distribution do you want to use:");
+			System.out.println("1 - Bernoulli Distribution");
+			System.out.println("2 - Gaussian Distribution");
+			
+			String input = scanner.next();
+			try {
+				Integer choice = Integer.valueOf(input);
+				if (choice == 1 || choice == 2 || choice == 3) {
+					distributionType = choice;
+				} else {
+					throw new NumberFormatException();
+				}
+			} catch (NumberFormatException e) {
+				System.out.println("'" + input + "' is not a valid option.");
+			}
+		}
+		System.out.println("Okay, you chose #" + distributionType + ".");
+		
 		System.out.println("And how many times would you like to run our algorithm?");
 		int userTimesChoice = 0;
 		while(userTimesChoice < 1) {
@@ -61,25 +82,57 @@ public class Main {
 		}
 		scanner.close();
 		
-		System.out.println("Great! We will run " + userTimesChoice + " time(s) the algorithm #" + userFeatureChoice + ".");
+		System.out.print("Great! We will run " + userTimesChoice + " time(s) the algorithm with ");
+		switch (userFeatureChoice) {
+		case 1:
+			System.out.print("one feature");
+			break;
+		case 2:
+			System.out.print("ten features");
+			break;
+		case 3:
+			System.out.print("all features");
+			break;
+		default:
+			break;
+		}
+		System.out.println(" using the " + (distributionType == 1 ? "Bernoulli" : "Gaussian") + " distribution.");
+		System.out.println();
 		System.out.println();
 		
-		Double[] meanAndVariance = runAlgorithm(emails, userTimesChoice, Classifier.values()[userFeatureChoice-1]);
+		Double[] meanAndVariance = runAlgorithm(emails, userTimesChoice, distributionType, Classifier.values()[userFeatureChoice-1]);
 		System.out.println();
 		System.out.println("The mean was " + meanAndVariance[MEAN] + ".");
 		System.out.println("The variance was " + meanAndVariance[VARIANCE] + ".");
 	}
 
-	private static Double[] runAlgorithm(ArrayList<Email> emails, int times, Classifier classifier) {
+	private static Double[] runAlgorithm(ArrayList<Email> emails, int times, int distributionType, Classifier classifier) {
+		List<Double> accuracyList;
+		
+		if (distributionType == 1) {
+			BernoulliClassifierRunner runner = new BernoulliClassifierRunner(emails);
+			accuracyList = runDistribution(runner, times,
+					classifier);
+		} else {
+			GaussianClassifierRunner runner = new GaussianClassifierRunner(emails);
+			accuracyList = runDistribution(runner, times,
+					classifier);
+		}
+		
+		return calculateMeanAndVariance(accuracyList);
+	}
+
+	private static List<Double> runDistribution(
+			BaseClassifierRunner runner, int times, Classifier classifier) {
 		List<Double> accuracyList = new ArrayList<Double>();
 		for (int i = 0; i < times; i++) {
-			Double accuracy = ClassifierRunner.runClassifier(emails, classifier);
+			runner.initializeSets();
+			Double accuracy = runner.runClassifier(classifier);
 			accuracyList.add(accuracy);
 			System.out.println("Run #" + (i+1) + " accuracy: " + accuracy);
 			System.out.println("==========================================");
 		}
-		
-		return calculateMeanAndVariance(accuracyList);
+		return accuracyList;
 	}
 	
 	private static Double[] calculateMeanAndVariance(List<Double> accuracyList) {

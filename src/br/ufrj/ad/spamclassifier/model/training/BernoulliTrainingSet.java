@@ -1,11 +1,12 @@
-package br.ufrj.ad.spamclassifier.model;
+package br.ufrj.ad.spamclassifier.model.training;
 
 import java.util.Collection;
 import java.util.HashMap;
 
 import br.ufrj.ad.spamclassifier.database.Parser;
+import br.ufrj.ad.spamclassifier.model.Email;
 
-public class TrainingSet {
+public class BernoulliTrainingSet {
 	
 	public enum FeatureType {
 		WORD, CHAR, AVG_UNINT_CAPT, LNGST_UNINT_CAPT, NUM_CAPT;
@@ -36,7 +37,7 @@ public class TrainingSet {
 	private HashMap<String, Float> mSpamProbability;
 	private HashMap<String, Float> mHamProbability;
 
-	public TrainingSet(Collection<String> words, Collection<String> characters,
+	public BernoulliTrainingSet(Collection<String> words, Collection<String> characters,
 			Collection<? extends Email> emails) {
 		this.mWords = words;
 		this.mCharacters = characters;
