@@ -17,6 +17,14 @@ public class BernoulliTestSet extends BaseTestSet {
 		this.mTestList = testList;
 	}
 	
+	private Double getSumOfLogsForProbabilities(Classification classification, List<String> words, Email email) {
+		Double product = Math.log(mTrainingSet.getProbability(classification, words.get(0), email));
+		for (int i = 1; i < words.size(); i++) {
+			product += Math.log(mTrainingSet.getProbability(classification, words.get(i), email));
+		}
+		return product;
+	}
+	
 	private Double[] getBayesProbabilities(List<String> words, Email email) {
 		Double[] probs = new Double[2];
 		
@@ -56,11 +64,8 @@ public class BernoulliTestSet extends BaseTestSet {
 		words.add(feature.toString());
 
 		Integer emailsClassifiedCorrectly = 0;
-		Integer emailsContainingFeature = 0;
 		for (Email email : mTestList) {
-			if (email.getFeatureFrequency(feature.toString()) > 0) {
-				emailsContainingFeature++;
-			} else {
+			if (email.getFeatureFrequency(feature.toString()) <= 0) {
 				continue;
 			}
 			
@@ -68,7 +73,7 @@ public class BernoulliTestSet extends BaseTestSet {
 			emailsClassifiedCorrectly += isClassificationCorrect(probs, email);
 		}
 		
-		return (double) emailsClassifiedCorrectly / emailsContainingFeature;
+		return (double) emailsClassifiedCorrectly / mTestList.size();
 	}
 	
 	@Override
@@ -84,13 +89,5 @@ public class BernoulliTestSet extends BaseTestSet {
 		}
 		
 		return (double) emailsClassifiedCorrectly / mTestList.size();
-	}
-
-	private Double getSumOfLogsForProbabilities(Classification classification, List<String> words, Email email) {
-		Double product = Math.log(mTrainingSet.getProbability(classification, words.get(0), email));
-		for (int i = 1; i < words.size(); i++) {
-			product += Math.log(mTrainingSet.getProbability(classification, words.get(i), email));
-		}
-		return product;
 	}
 }
