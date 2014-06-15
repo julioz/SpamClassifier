@@ -129,7 +129,9 @@ public class Main {
 			runner.initializeSets();
 			Double accuracy = runner.runClassifier(classifier);
 			accuracyList.add(accuracy);
-			System.out.println("Run #" + (i+1) + " accuracy: " + accuracy);
+			System.out.println("Run #" + (i + 1)
+					+ (classifier == Classifier.ONE_FEATURE ? " best" : "")
+					+ " accuracy: " + accuracy);
 			System.out.println("==========================================");
 		}
 		return accuracyList;

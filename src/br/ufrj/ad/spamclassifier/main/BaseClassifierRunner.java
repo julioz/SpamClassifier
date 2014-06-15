@@ -57,6 +57,7 @@ public abstract class BaseClassifierRunner {
 		System.out.println(accuracyMap.size()
 				+ " analyzed features (individually)");
 
+		Double avgAccuracy = getAvgAccuracy(accuracyMap);
 		// Uncomment to see the accuracy of the
 		// classification for each feature
 		// printMap(accuracyMap, true);
@@ -76,9 +77,19 @@ public abstract class BaseClassifierRunner {
 
 		System.out.println("Best feature: '" + bestFeatures.get(0).getKey()
 				+ "'");
+		System.out.println("Average accuracy: " + avgAccuracy);
 		return bestFeatures.get(0).getValue();
 	}
 	
+	private Double getAvgAccuracy(HashMap<String, Double> accuracyMap) {
+		Double acc = 0.0;
+		for (Double value : accuracyMap.values()) {
+			acc += value;
+		}
+		
+		return acc / accuracyMap.size();
+	}
+
 	protected Double executeUsingTenFeatures(BaseTestSet testSet) {
 		// select ten features at random
 		List<String> features = new ArrayList<String>();
